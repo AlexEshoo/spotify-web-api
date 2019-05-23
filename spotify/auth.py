@@ -78,7 +78,7 @@ class SpotifyOAuth(object):
                                        "redirect_uri": self.redirect_uri},
                                  headers={"Authorization": basic_auth})
 
-        if response.status_code == 200:
+        if response.status_code == requests.codes.OK:
             return AccessToken(**response.json())
         else:
             raise AuthorizationError(response.reason)
@@ -90,7 +90,7 @@ class SpotifyOAuth(object):
                                        "refresh_token": self.access_token.refresh_token},
                                  headers={"Authorization": basic_auth})
 
-        if response.status_code == 200:
+        if response.status_code == requests.codes.OK:
             return AccessToken(**response.json(),
                                refresh_token=self.access_token.refresh_token)
         else:
