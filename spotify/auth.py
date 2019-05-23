@@ -1,4 +1,5 @@
 import base64
+import json
 import time
 import urllib.parse
 
@@ -70,6 +71,13 @@ class SpotifyOAuth(object):
     def get_cached_token(self):
         ...
 
+    def cache_token(self):
+        if not self.cache_path:
+            raise CacheError("No cache path provided.")
+
+        with open(self.cache_path, 'w') as f:
+            json.dump(self.access_token.info, f)
+
     def get_access_and_refresh_tokens(self, code):
         basic_auth = make_basic_authorization(self.client_id, self.client_secret)
         response = requests.post(SpotifyOAuth.TOKEN_ENDPOINT,
@@ -98,17 +106,23 @@ class SpotifyOAuth(object):
 
 
 class AccessToken(object):
-    def __init__(self, access_token=None, token_type=None, expires_in=None, scope=None, refresh_token=None):
-        self._received_at = time.time()
-        self.token = access_token
-        self.token_type = token_type
-        self.expires_in = expires_in
-        self.scope = scope.split(' ') or []  # api returns "" when there is no scope.
-        self.refresh_token = refresh_token
+    def __init__(self, **kwargs):
+        self.token = kwargs.get("access_token", None)
+        self.token_type = kwargs.get("token_type", None)
+        self.expires_in = kwargs.get("expires_in", None)
+        if self.expires_in:
+            self.expires_at = time.time() + self.expires_in
+
+        self.scope = kwargs.get("scope", None)
+        if self.scope is not None:
+            if isinstance(self.scope, str):
+                self.scope = self.scope.split()  # make it a list
+
+        self.refresh_token = kwargs.get("refresh_token", None)
 
     @property
     def expired(self):
-        return time.time() > self._received_at + self.expires_in
+        return time.time() > self.expires_at
 
     def __str__(self):
         return str(self.__dict__)
@@ -116,6 +130,13 @@ class AccessToken(object):
     def __repr__(self):
         return str(self)
 
+    @property
+    def info(self):
+        return self.__dict__
+
 
 class AuthorizationError(Exception):
+    pass
+
+class CacheError(Exception):
     pass
