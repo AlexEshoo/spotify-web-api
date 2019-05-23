@@ -93,6 +93,8 @@ class SpotifyOAuth(object):
         if response.status_code == 200:
             return AccessToken(**response.json(),
                                refresh_token=self.access_token.refresh_token)
+        else:
+            raise AuthorizationError(response.reason)
 
 
 class AccessToken(object):
