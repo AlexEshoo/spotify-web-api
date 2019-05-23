@@ -47,7 +47,8 @@ class SpotifyOAuth(object):
         self.scope = scope
         self.show_dialog = show_dialog
         self.cache_path = cache_path
-        self.access_token = None
+
+        self.access_token = self.get_cached_token()
 
     def get_authorize_url(self):
         # TODO: Add in state and scope parameter
@@ -69,14 +70,27 @@ class SpotifyOAuth(object):
         return query_params.get("code", None)
 
     def get_cached_token(self):
-        ...
-
-    def cache_token(self):
         if not self.cache_path:
-            raise CacheError("No cache path provided.")
+            return None
+
+        try:
+            with open(self.cache_path, 'r') as f:
+                token = AccessToken(**json.load(f))
+
+        except FileNotFoundError:
+            return None
+
+        if token.expired:
+            token = self.refresh_token(token.refresh_token)
+
+        return token
+
+    def cache_token(self, token):
+        if not self.cache_path:
+            return
 
         with open(self.cache_path, 'w') as f:
-            json.dump(self.access_token.info, f)
+            json.dump(token.info, f)
 
     def get_access_and_refresh_tokens(self, code):
         basic_auth = make_basic_authorization(self.client_id, self.client_secret)
@@ -91,16 +105,19 @@ class SpotifyOAuth(object):
         else:
             raise AuthorizationError(response.reason)
 
-    def refresh_token(self):
+    def refresh_token(self, refresh_token):
         basic_auth = make_basic_authorization(self.client_id, self.client_secret)
         response = requests.post(SpotifyOAuth.TOKEN_ENDPOINT,
                                  data={"grant_type": "refresh_token",
-                                       "refresh_token": self.access_token.refresh_token},
+                                       "refresh_token": refresh_token},
                                  headers={"Authorization": basic_auth})
 
         if response.status_code == requests.codes.OK:
-            return AccessToken(**response.json(),
-                               refresh_token=self.access_token.refresh_token)
+            token = AccessToken(**response.json(),
+                                refresh_token=refresh_token)
+            self.cache_token(token)
+            return token
+
         else:
             raise AuthorizationError(response.reason)
 
@@ -110,9 +127,7 @@ class AccessToken(object):
         self.token = kwargs.get("access_token", None)
         self.token_type = kwargs.get("token_type", None)
         self.expires_in = kwargs.get("expires_in", None)
-        if self.expires_in:
-            self.expires_at = time.time() + self.expires_in
-
+        self.expires_at = time.time() + self.expires_in
         self.scope = kwargs.get("scope", None)
         if self.scope is not None:
             if isinstance(self.scope, str):
@@ -138,5 +153,3 @@ class AccessToken(object):
 class AuthorizationError(Exception):
     pass
 
-class CacheError(Exception):
-    pass
