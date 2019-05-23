@@ -57,7 +57,8 @@ class SpotifyOAuth(object):
                              params={"client_id": self.client_id,
                                      "response_type": "code",
                                      "redirect_uri": self.redirect_uri,
-                                     "show_dialog": self.show_dialog})
+                                     "show_dialog": self.show_dialog,
+                                     "state": self.state})
 
         return r.prepare().url
 
@@ -66,6 +67,10 @@ class SpotifyOAuth(object):
         # TODO: Handle Errors
         parsed = urllib.parse.urlparse(url)
         query_params = dict(urllib.parse.parse_qsl(parsed.query))
+
+        recv_state = query_params.get("state", None)
+        if state != recv_state:
+            raise AuthorizationError("Mismatching `state` parameter in authorization url")
 
         return query_params.get("code", None)
 
