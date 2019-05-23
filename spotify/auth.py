@@ -2,6 +2,7 @@ import base64
 import json
 import time
 import urllib.parse
+import webbrowser
 
 import requests
 
@@ -44,33 +45,37 @@ class SpotifyOAuth(object):
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
         self.state = state
-        self.scope = scope
+        self.scope = scope or []
         self.show_dialog = show_dialog
         self.cache_path = cache_path
 
         self.access_token = self.get_cached_token()
 
     def get_authorize_url(self):
-        # TODO: Add in state and scope parameter
+        query_params = {"client_id": self.client_id,
+                        "response_type": "code",
+                        "redirect_uri": self.redirect_uri,
+                        "show_dialog": self.show_dialog,
+                        "state": self.state}
+
+        if self.scope:
+            query_params["scope"] = " ".join(self.scope)
+
         r = requests.Request(method="GET",
                              url=SpotifyOAuth.AUTHORIZE_ENDPOINT,
-                             params={"client_id": self.client_id,
-                                     "response_type": "code",
-                                     "redirect_uri": self.redirect_uri,
-                                     "show_dialog": self.show_dialog,
-                                     "state": self.state})
+                             params=query_params)
 
         return r.prepare().url
 
     def get_token_code(self, url, state=None):
-        # TODO: Add state validation
         # TODO: Handle Errors
         parsed = urllib.parse.urlparse(url)
         query_params = dict(urllib.parse.parse_qsl(parsed.query))
 
         recv_state = query_params.get("state", None)
         if state != recv_state:
-            raise AuthorizationError("Mismatching `state` parameter in authorization url")
+            raise AuthorizationError(f"Mismatching `state` parameter in authorization url. "
+                                     f"Expected: {state}, but received: {recv_state}")
 
         return query_params.get("code", None)
 
@@ -84,6 +89,10 @@ class SpotifyOAuth(object):
 
         except FileNotFoundError:
             return None
+
+        if not set(self.scope).issubset(set(token.scope)):
+            # TODO Should this be a warning instead?
+            return None  # Scope Changed.
 
         if token.expired:
             token = self.refresh_token(token.refresh_token)
@@ -106,7 +115,10 @@ class SpotifyOAuth(object):
                                  headers={"Authorization": basic_auth})
 
         if response.status_code == requests.codes.OK:
-            return AccessToken(**response.json())
+            token = AccessToken(**response.json())
+            self.cache_token(token)
+            return token
+
         else:
             raise AuthorizationError(response.reason)
 
@@ -125,6 +137,40 @@ class SpotifyOAuth(object):
 
         else:
             raise AuthorizationError(response.reason)
+
+    @staticmethod
+    def authorize_local(client_id, client_secret, redirect_uri,
+                        state=None, scope=None, show_dialog=False, cache_path=None):
+        """
+        Convenience Constructor to create an OAuth object by verifying from a locally
+        running script interactively.
+        """
+
+        auth = SpotifyOAuth(client_id, client_secret, redirect_uri,
+                            state=state, scope=scope, show_dialog=show_dialog, cache_path=cache_path)
+
+        if auth.access_token:
+            try:
+                auth.refresh_token(auth.access_token.refresh_token)
+                print("Access Token retrieved from cache!")
+                return auth  # token retrieved from cache
+
+            except AuthorizationError:
+                print("Re-Authentication Required")
+
+        print("Open the URL shown below in a web browser and follow the on screen steps to authorize the App.")
+
+        authorize_url = auth.get_authorize_url()
+        print(authorize_url)
+        webbrowser.open_new_tab(authorize_url)
+
+        redirected = input("Enter URL Redirected to: ").strip()
+
+        code = auth.get_token_code(redirected, state=auth.state)
+
+        auth.access_token = auth.get_access_and_refresh_tokens(code)
+
+        return auth
 
 
 class AccessToken(object):
@@ -157,4 +203,3 @@ class AccessToken(object):
 
 class AuthorizationError(Exception):
     pass
-
