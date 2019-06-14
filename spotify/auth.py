@@ -29,7 +29,7 @@ class SpotifyClientCredentials(object):
                                  data={"grant_type": "client_credentials"},
                                  headers={"Authorization": basic_auth})
 
-        if response.status_code == 200:
+        if response.status_code == requests.codes.OK:
             self.access_token = AccessToken(**response.json())
         else:
             raise AuthorizationError(response.reason)
@@ -49,7 +49,11 @@ class SpotifyOAuth(object):
         self.show_dialog = show_dialog
         self.cache_path = cache_path
 
-        self.access_token = self.get_cached_token()
+        self.token_info = self.get_cached_token()
+
+    @property
+    def access_token(self):
+        return self.token_info.access_token
 
     def get_authorize_url(self):
         query_params = {"client_id": self.client_id,
@@ -149,9 +153,9 @@ class SpotifyOAuth(object):
         auth = SpotifyOAuth(client_id, client_secret, redirect_uri,
                             state=state, scope=scope, show_dialog=show_dialog, cache_path=cache_path)
 
-        if auth.access_token:
+        if auth.token_info:
             try:
-                auth.refresh_token(auth.access_token.refresh_token)
+                auth.refresh_token(auth.token_info.refresh_token)
                 print("Access Token retrieved from cache!")
                 return auth  # token retrieved from cache
 
@@ -168,14 +172,14 @@ class SpotifyOAuth(object):
 
         code = auth.get_token_code(redirected, state=auth.state)
 
-        auth.access_token = auth.get_access_and_refresh_tokens(code)
+        auth.token_info = auth.get_access_and_refresh_tokens(code)
 
         return auth
 
 
 class AccessToken(object):
     def __init__(self, **kwargs):
-        self.token = kwargs.get("access_token", None)
+        self.access_token = kwargs.get("access_token", None)
         self.token_type = kwargs.get("token_type", None)
         self.expires_in = kwargs.get("expires_in", None)
         self.expires_at = time.time() + self.expires_in
