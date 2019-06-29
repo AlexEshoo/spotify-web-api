@@ -231,6 +231,24 @@ class Spotify(object):
 
         return self._request("PUT", endpoint, payload=json.dumps(payload))
 
+    def search(self, q, search_tracks=False, search_artists=False, search_albums=False, search_playlists=False,
+               market="from_token", limit=None, offset=None, include_external=None):
+        endpoint = "search"
+
+        types = {"track": search_tracks,
+                 "artist": search_artists,
+                 "album": search_albums,
+                 "playlist": search_playlists}
+
+        query = {"q": q,
+                 "type": ",". join((k for k, b in types.items() if b)),
+                 "market": market,
+                 "limit": limit,
+                 "offset": offset,
+                 "include_external": include_external}
+
+        return self._request("GET", endpoint, query=query)
+
     def get_track(self, track_id):
         endpoint = slash_join("tracks", track_id)
         return self._request("GET", endpoint)
