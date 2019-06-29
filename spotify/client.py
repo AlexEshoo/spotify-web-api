@@ -77,6 +77,46 @@ class Spotify(object):
 
         return self._request("GET", endpoint, query=query)
 
+    def get_recommendations(self, seed_artists=None, seed_genres=None, seed_tracks=None,
+                            limit=None, market=None, **kwargs):
+        """
+        kwargs contains tunable Track attributes. TODO: add these explicitly?
+        """
+        endpoint = "recommendations"
+
+        if not any((seed_artists, seed_genres, seed_tracks)):
+            return None  # TODO: Don't fail silently? Let request fail to handle this?
+
+        seed_artists = seed_artists or []
+        seed_tracks = seed_tracks or []
+        seed_genres = seed_genres or []
+
+        query = {'seed_artists': ",".join(seed_artists),
+                 'seed_genres': ",".join(seed_genres),
+                 'seed_tracks': ",".join(seed_tracks),
+                 'limit': limit,
+                 'market': market}
+
+        query.update(kwargs)  # Add in other parameters from API.
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_recommendation_genres(self):
+        endpoint = "recommendations/available-genre-seeds"
+        return self._request("GET", endpoint)
+
+    def get_all_new_releases(self, country=None, limit=None, offset=None):
+        endpoint = "browse/new-releases"
+        query = {'country': country, 'limit': limit, 'offset': offset}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_all_featured_playlists(self, country=None, locale=None, timestamp=None, limit=None, offset=None):
+        endpoint = "browse/featured-playlists"
+        query = {'country': country, 'locale': locale, 'timestamp': timestamp, 'limit': limit, 'offset': offset}
+
+        return self._request("GET", endpoint, query=query)
+
     def get_track(self, track_id):
         endpoint = slash_join("tracks", track_id)
         return self._request("GET", endpoint)
