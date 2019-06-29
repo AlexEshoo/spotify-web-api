@@ -17,7 +17,7 @@ def slash_join(*args):
 
 
 class Spotify(object):
-    def __init__(self, auth:SpotifyOAuth=None, client_id=None, client_secret=None, market=None):
+    def __init__(self, auth: SpotifyOAuth = None, client_id=None, client_secret=None, market=None):
         if auth:
             self.auth = auth
         elif client_id and client_secret:
@@ -45,6 +45,38 @@ class Spotify(object):
             print(response.reason)
             return None  # TODO: handler errors better and other responses
 
+    def get_current_user_profile(self):
+        endpoint = "me"
+        return self._request("GET", endpoint)
+
+    def get_user_profile(self, user_id):
+        endpoint = slash_join("users", user_id)
+        return self._request("GET", endpoint)
+
+    def get_all_categories(self, country=None, locale=None, limit=None, offset=None):
+        endpoint = "browse/categories"
+        query = {"country": country,
+                 "locale": locale,
+                 "limit": limit,
+                 "offset": offset}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_category(self, category_id, country=None, locale=None):
+        endpoint = slash_join("browse/categories", category_id)
+        query = {"country": country,
+                 "locale": locale}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_category_playlists(self, category_id, country=None, limit=None, offset=None):
+        endpoint = slash_join("browse/categories", category_id, "playlists")
+        query = {"country": country,
+                 "limit": limit,
+                 "offset": offset}
+
+        return self._request("GET", endpoint, query=query)
+
     def get_track(self, track_id):
         endpoint = slash_join("tracks", track_id)
         return self._request("GET", endpoint)
@@ -60,7 +92,7 @@ class Spotify(object):
             query = {"ids": ",".join(track_ids)}
         else:
             endpoint = slash_join("audio-features", track_ids)
-            query=None
+            query = None
 
         return self._request("GET", endpoint, query=query)
 
