@@ -26,4 +26,4 @@ auth = spotify.auth.SpotifyOAuth.authorize_local(client_id, client_secret, redir
 
 client = Spotify(auth, market="US")
 
-pprint(client.transfer_playback(["73ccb2af19cd8c3817f5b21dbd14cde736eb37cb"]))
+pprint(client.get_artist_related_artists("5TgQ66WuWkoQ2xYxaSTnVP"))

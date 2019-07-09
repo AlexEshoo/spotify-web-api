@@ -360,3 +360,32 @@ class Spotify(object):
 
         return self._request("PUT", endpoint, payload=json.dumps(payload))
 
+    def get_artist(self, artist_id):
+        endpoint = slash_join("artists", artist_id)
+        return self._request("GET", endpoint)
+
+    def get_artists(self, artist_ids):
+        endpoint = "artists"
+        query = {"ids": artist_ids}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_artist_albums(self, artist_id, include_groups=None, country=None, limit=None, offset=None):
+        endpoint = slash_join("artists", artist_id, "albums")
+        query = {"include_groups": include_groups,
+                 "country": country,
+                 "limit": limit,
+                 "offset": offset}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_artist_top_tracks(self, artist_id, country=None):
+        endpoint = slash_join("artists", artist_id, "top-tracks")
+        query = {"country": country}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_artist_related_artists(self, artist_id):
+        endpoint = slash_join("artists", artist_id, "related-artists")
+
+        return self._request("GET", endpoint)
