@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 
 from spotify.auth import SpotifyClientCredentials, SpotifyOAuth
 
+
 # TODO: Handle Paging Objects
 
 class ClientError(Exception):
@@ -42,7 +43,7 @@ class Spotify(object):
 
         response = requests.request(method, url, headers=headers, params=query, data=payload)
 
-        print(response.content)
+        # print(response.status_code, response.content, response.headers)
 
         if response.status_code == requests.codes.OK:
             if response.content:  # Some requests have empty bodies...
@@ -233,6 +234,7 @@ class Spotify(object):
 
     def search(self, q, search_tracks=False, search_artists=False, search_albums=False, search_playlists=False,
                market="from_token", limit=None, offset=None, include_external=None):
+        # TODO: write code to assist query creation. Maybe different Query Object?
         endpoint = "search"
 
         types = {"track": search_tracks,
@@ -241,7 +243,7 @@ class Spotify(object):
                  "playlist": search_playlists}
 
         query = {"q": q,
-                 "type": ",". join((k for k, b in types.items() if b)),
+                 "type": ",".join((k for k, b in types.items() if b)),
                  "market": market,
                  "limit": limit,
                  "offset": offset,
@@ -271,3 +273,90 @@ class Spotify(object):
     def get_audio_analysis(self, track_id):
         endpoint = slash_join("audio-analysis", track_id)
         return self._request("GET", endpoint)
+
+    def get_devices(self):
+        endpoint = "me/player/devices"
+        return self._request("GET", endpoint)
+
+    def get_playback_state(self, market="from_token"):
+        endpoint = "me/player"
+        query = {"market": market}
+        return self._request("GET", endpoint, query=query)
+
+    def get_recently_played(self, limit=None, after=None, before=None):
+        endpoint = "me/player/recently-played"
+        query = {"limit": limit,
+                 "after": after,
+                 "before": before}
+        return self._request("GET", endpoint, query=query)
+
+    def get_currently_playing_track(self, market="from_token"):
+        endpoint = "me/player/currently-playing"
+        query = {"market": market}
+
+        return self._request("GET", endpoint, query=query)
+
+    def pause_playback(self, device_id=None):
+        endpoint = "me/player/pause"
+        query = {"device_id": device_id}
+
+        return self._request("PUT", endpoint, query=query)
+
+    def seek_playback(self, position_ms, device_id=None):
+        endpoint = "me/player/seek"
+        query = {"position_ms": position_ms,
+                 "device_id": device_id}
+
+        return self._request("PUT", endpoint, query=query)
+
+    def set_playback_repeat_mode(self, state="off", device_id=None):
+        endpoint = "me/player/repeat"
+        query = {"state": state,  # Can be 'track', 'Context', or 'off'
+                 "device_id": device_id}
+
+        return self._request("PUT", endpoint, query=query)
+
+    def set_playback_volume(self, volume_percent, device_id=None):
+        endpoint = "me/player/volume"
+        query = {"volume_percent": volume_percent,
+                 "device_id": device_id}
+
+        return self._request("PUT", endpoint, query=query)
+
+    def skip_next_track(self, device_id=None):
+        endpoint = "me/player/next"
+        query = {"device_id": device_id}
+
+        return self._request("POST", endpoint, query=query)
+
+    def skip_previous_track(self, device_id=None):
+        endpoint = "me/player/previous"
+        query = {"device_id": device_id}
+
+        return self._request("POST", endpoint, query=query)
+
+    def resume_playback(self, device_id=None, context_uri=None, uris=None, offset=None, position_ms=None):
+        endpoint = "me/player/play"
+        query = {"device_id": device_id}
+
+        payload = {"context_uri": context_uri,
+                   "uris": uris,
+                   "offset": offset,
+                   "position_ms": position_ms}
+
+        return self._request("PUT", endpoint, query=query, payload=json.dumps(payload))
+
+    def set_playback_shuffle_state(self, state=False, device_id=None):
+        endpoint = "me/player/shuffle"
+        query = {"state": state,  # Can be True or False
+                 "device_id": device_id}
+
+        return self._request("PUT", endpoint, query=query)
+
+    def transfer_playback(self, device_ids, play=True):
+        endpoint = "me/player"
+        payload = {"device_ids": device_ids,
+                   "play": play}
+
+        return self._request("PUT", endpoint, payload=json.dumps(payload))
+
