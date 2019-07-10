@@ -389,3 +389,24 @@ class Spotify(object):
         endpoint = slash_join("artists", artist_id, "related-artists")
 
         return self._request("GET", endpoint)
+
+    def get_album(self, album_id, market="from_token"):
+        endpoint = slash_join("albums", album_id)
+        query = {"market": market}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_albums(self, album_ids, market="from_token"):
+        endpoint = "albums"
+        query = {"ids": album_ids,
+                 "market": market}
+
+        return self._request("GET", endpoint, query=query)
+
+    def get_album_tracks(self, album_id, limit=None, offset=None, market="from_token"):
+        endpoint = slash_join("albums", album_id, "tracks")
+        query = {"limit": limit,
+                 "offset": offset,
+                 "market": market}
+
+        return self._request("GET", endpoint, query=query)

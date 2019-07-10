@@ -3,6 +3,7 @@ import uuid
 
 import spotify.auth
 from spotify.client import Spotify
+from spotify.models import Track
 
 from pprint import pprint
 
@@ -26,4 +27,4 @@ auth = spotify.auth.SpotifyOAuth.authorize_local(client_id, client_secret, redir
 
 client = Spotify(auth, market="US")
 
-pprint(client.get_artist_related_artists("5TgQ66WuWkoQ2xYxaSTnVP"))
+pprint(Track(client.get_track("7w87IxuO7BDcJ3YUqCyMTT")).name)
